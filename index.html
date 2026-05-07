@@ -169,6 +169,8 @@
     letter-spacing: -0.005em;
     contain: layout style;
     --glow: rgba(255, 220, 170, 0.95);
+    --glow-scale: 1;
+    --float-scale: 1;
   }
 
   .floating-word .char {
@@ -176,11 +178,11 @@
     animation: char-life var(--lifespan, 6500ms) cubic-bezier(0.33, 0, 0.4, 1) forwards;
     animation-delay: var(--char-delay, 0ms);
     will-change: transform, opacity;
-    /* STATIC glow — set once at spawn, opacity naturally fades it with the char */
+    /* Glow scale lets the slider tune intensity 0–2× without re-rendering shadow stack */
     text-shadow:
-      0 0 5px var(--glow),
-      0 0 12px var(--glow),
-      0 0 26px var(--glow);
+      0 0 calc(5px  * var(--glow-scale))  var(--glow),
+      0 0 calc(12px * var(--glow-scale))  var(--glow),
+      0 0 calc(26px * var(--glow-scale))  var(--glow);
   }
 
   /* Pause: freeze ALL char animations exactly where they are */
@@ -188,9 +190,8 @@
     animation-play-state: paused !important;
   }
 
-  /* Single continuous lifecycle: appear-bloom → drift up → fade.
-     No animated shadow, no animated blur. Bloom at 18% (scale 1.06) replaces
-     the lost glow pulse with a subtle "breathe in" feeling. */
+  /* Single continuous lifecycle. Y drift values multiplied by --float-scale
+     so the Float slider can stretch or shrink how high text drifts. */
   @keyframes char-life {
     0% {
       opacity: 0;
@@ -202,44 +203,44 @@
     }
     18% {
       opacity: 1;
-      transform: translate(0, -3px) scale(1.06);
+      transform: translate(0, calc(-3px * var(--float-scale))) scale(1.06);
     }
     26% {
       opacity: 1;
-      transform: translate(0, -2px) scale(1);
+      transform: translate(0, calc(-2px * var(--float-scale))) scale(1);
     }
     42% {
       opacity: 0.95;
       transform:
-        translate(calc(var(--drift-x) * 0.22), -22px)
+        translate(calc(var(--drift-x) * 0.22), calc(-22px * var(--float-scale)))
         rotate(calc(var(--rot-end) * 0.2))
         scale(0.98);
     }
     60% {
       opacity: 0.7;
       transform:
-        translate(calc(var(--drift-x) * 0.45), -65px)
+        translate(calc(var(--drift-x) * 0.45), calc(-65px * var(--float-scale)))
         rotate(calc(var(--rot-end) * 0.45))
         scale(0.92);
     }
     78% {
       opacity: 0.4;
       transform:
-        translate(calc(var(--drift-x) * 0.7), -120px)
+        translate(calc(var(--drift-x) * 0.7), calc(-120px * var(--float-scale)))
         rotate(calc(var(--rot-end) * 0.7))
         scale(0.82);
     }
     92% {
       opacity: 0.12;
       transform:
-        translate(calc(var(--drift-x) * 0.9), -170px)
+        translate(calc(var(--drift-x) * 0.9), calc(-170px * var(--float-scale)))
         rotate(calc(var(--rot-end) * 0.9))
         scale(0.7);
     }
     100% {
       opacity: 0;
       transform:
-        translate(var(--drift-x), -210px)
+        translate(var(--drift-x), calc(-210px * var(--float-scale)))
         rotate(var(--rot-end))
         scale(0.6);
     }
@@ -373,11 +374,10 @@
   .lang-btn {
     background: transparent;
     border: none;
-    color: rgba(245, 240, 230, 0.35);
+    color: rgba(245, 240, 230, 0.5);
     padding: 5px 11px;
     border-radius: 999px;
-    cursor: default;
-    pointer-events: none;
+    cursor: pointer;
     font-family: 'Inter', sans-serif;
     font-size: 0.68rem;
     text-transform: uppercase;
@@ -386,21 +386,22 @@
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  /* All three lang buttons light up subtly while listening */
+  .lang-btn:hover { color: var(--fg); }
+
   .lang-btn.active {
-    background: rgba(240, 211, 154, 0.10);
-    color: rgba(240, 211, 154, 0.75);
-    box-shadow: inset 0 0 0 1px rgba(240, 211, 154, 0.18);
+    background: rgba(240, 211, 154, 0.18);
+    color: var(--accent);
+    box-shadow: inset 0 0 0 1px rgba(240, 211, 154, 0.25);
   }
 
-  /* Flash on the winning language for each recognized utterance */
   .lang-btn.flash {
-    background: rgba(240, 211, 154, 0.4) !important;
-    color: #fff !important;
-    box-shadow:
-      inset 0 0 0 1px rgba(240, 211, 154, 0.55),
-      0 0 16px rgba(240, 211, 154, 0.6) !important;
-    transform: scale(1.08);
+    animation: lang-flash 0.9s ease-out;
+  }
+
+  @keyframes lang-flash {
+    0%   { box-shadow: inset 0 0 0 1px rgba(240, 211, 154, 0.25); }
+    35%  { box-shadow: inset 0 0 0 1px rgba(240, 211, 154, 0.6), 0 0 14px rgba(240, 211, 154, 0.5); }
+    100% { box-shadow: inset 0 0 0 1px rgba(240, 211, 154, 0.25); }
   }
 
   /* BG toggle */
@@ -721,6 +722,102 @@
     text-underline-offset: 2px;
   }
 
+  /* === Diagnostic panel === */
+  .diag-toggle {
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(240, 211, 154, 0.15);
+    color: rgba(245, 240, 230, 0.65);
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    user-select: none;
+  }
+
+  .diag-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .diag-toggle.active {
+    background: rgba(240, 211, 154, 0.18);
+    color: var(--accent);
+    border-color: rgba(240, 211, 154, 0.35);
+  }
+
+  #diag-panel {
+    display: none;
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    background: rgba(15, 14, 12, 0.85);
+    border: 1px solid rgba(240, 211, 154, 0.12);
+    border-radius: 8px;
+    padding: 10px 14px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+    font-size: 0.72rem;
+    line-height: 1.55;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  #diag-panel.visible { display: block; }
+
+  #diag-panel .log-line {
+    color: rgba(245, 240, 230, 0.75);
+    padding: 1px 0;
+    border-bottom: 1px dashed rgba(240, 211, 154, 0.06);
+  }
+
+  #diag-panel .log-line:last-child { border-bottom: none; }
+  #diag-panel .log-line .t { color: rgba(240, 211, 154, 0.5); margin-right: 8px; }
+  #diag-panel .log-line.ok    { color: #b8e0a8; }
+  #diag-panel .log-line.warn  { color: #ffd690; }
+  #diag-panel .log-line.err   { color: #ff9080; }
+  #diag-panel .log-line.audio { color: #90c8ff; }
+
+  /* Audio-detected dot near mic button */
+  .audio-dot {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(150, 200, 150, 0.3);
+    border: 1px solid rgba(150, 200, 150, 0.6);
+    transition: all 0.3s;
+  }
+
+  .audio-dot.live {
+    background: #80e090;
+    box-shadow: 0 0 12px rgba(128, 224, 144, 0.9);
+    animation: dot-pulse 0.8s ease-in-out infinite;
+  }
+
+  @keyframes dot-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+  }
+
+  /* Disabled mic state when env can't support voice */
+  .mic-btn.unavailable {
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+    border-color: rgba(255, 100, 100, 0.4) !important;
+    animation: none !important;
+  }
+  .mic-btn.unavailable:hover { transform: none !important; }
+
   @media (max-width: 880px) {
     body { padding: 10px; gap: 6px; }
     .controls { gap: 10px; }
@@ -755,6 +852,7 @@
   <div class="controls" id="controls">
     <button class="mic-btn" id="mic-btn" title="Click to listen">
       <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+      <span class="audio-dot" id="audio-dot"></span>
     </button>
     <div class="status">
       <div class="status-label">Voice</div>
@@ -763,10 +861,10 @@
 
     <div class="divider"></div>
 
-    <div class="lang-picker" role="status" aria-label="All three languages listening simultaneously" title="All three languages are listening at once. The flashing one matched what you just said.">
-      <button class="lang-btn" data-lang="en-US" data-name="English" tabindex="-1">EN</button>
-      <button class="lang-btn" data-lang="id-ID" data-name="Bahasa Indonesia" tabindex="-1">ID</button>
-      <button class="lang-btn" data-lang="ms-MY" data-name="Bahasa Malaysia" tabindex="-1">MS</button>
+    <div class="lang-picker" role="tablist" aria-label="Recognition language">
+      <button class="lang-btn" data-lang="en-US" data-name="English">EN</button>
+      <button class="lang-btn" data-lang="id-ID" data-name="Bahasa Indonesia">ID</button>
+      <button class="lang-btn" data-lang="ms-MY" data-name="Bahasa Malaysia">MS</button>
     </div>
 
     <div class="divider"></div>
@@ -810,7 +908,36 @@
       <input type="range" id="size-slider" min="0.7" max="1.5" step="0.05" value="1.0">
     </div>
 
-    <div class="divider"></div>
+    <div class="slider-group">
+      <div class="slider-label">
+        <span>Lifespan</span>
+        <span class="slider-value" id="lifespan-val">1.0×</span>
+      </div>
+      <input type="range" id="lifespan-slider" min="0.4" max="2.5" step="0.1" value="1.0">
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-label">
+        <span>Glow</span>
+        <span class="slider-value" id="glow-val">1.0×</span>
+      </div>
+      <input type="range" id="glow-slider" min="0" max="2.0" step="0.1" value="1.0">
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-label">
+        <span>Float</span>
+        <span class="slider-value" id="float-val">1.0×</span>
+      </div>
+      <input type="range" id="float-slider" min="0.3" max="2.5" step="0.1" value="1.0">
+    </div>
+  </div>
+
+  <div class="controls controls-secondary" id="controls-3">
+    <button class="ctrl-btn" id="autocast-btn" title="Auto-cast random market words">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6V3m0 18v-3m6-9h3M3 12h3m11.66-6.66l2.12-2.12M4.22 19.78l2.12-2.12m11.32 0l2.12 2.12M4.22 4.22l2.12 2.12"/></svg>
+      <span id="autocast-label">Auto: Off</span>
+    </button>
 
     <button class="ctrl-btn" id="pause-btn" title="Pause / resume animations">
       <svg class="icon" viewBox="0 0 24 24" id="pause-icon"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg>
@@ -821,13 +948,25 @@
       <svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>
       <span>Clear</span>
     </button>
+
+    <button class="ctrl-btn" id="reset-btn" title="Reset all sliders to defaults">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      <span>Reset</span>
+    </button>
+
+    <button class="diag-toggle" id="diag-toggle" title="Show diagnostic event log">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+      <span>Diag</span>
+    </button>
   </div>
+
+  <div id="diag-panel" aria-live="polite"></div>
 
 </div>
 
 <div class="hint">
-  Echoes only bloom across the upper half of the facade. Speak in any of the three languages — all three listen at once. <br>
-  <kbd>Click</kbd> the building to scatter market words; <kbd>Space</kbd> pauses; <kbd>C</kbd> clears.
+  Pick a language (EN / ID / MS), then click the mic. Six sliders control speed, density, size, lifespan, glow, and float distance. <br>
+  <kbd>Auto-cast</kbd> spawns market words automatically without speech; <kbd>Space</kbd> pauses; <kbd>C</kbd> clears.
 </div>
 
 <script>
@@ -897,6 +1036,43 @@
     });
   }
 
+  // ============ Diagnostic logger ============
+  // Surfaces every recognizer event into a panel so problems are visible.
+  const diagPanel  = document.getElementById('diag-panel');
+  const diagToggle = document.getElementById('diag-toggle');
+  const MAX_LOG_LINES = 60;
+
+  function diag(msg, level = '') {
+    if (!diagPanel) return;
+    const line = document.createElement('div');
+    line.className = 'log-line ' + level;
+    const t = new Date();
+    const stamp = `${String(t.getMinutes()).padStart(2,'0')}:${String(t.getSeconds()).padStart(2,'0')}.${String(t.getMilliseconds()).padStart(3,'0')}`;
+    line.innerHTML = `<span class="t">${stamp}</span>${msg}`;
+    diagPanel.appendChild(line);
+    while (diagPanel.children.length > MAX_LOG_LINES) {
+      diagPanel.removeChild(diagPanel.firstChild);
+    }
+    diagPanel.scrollTop = diagPanel.scrollHeight;
+  }
+
+  diagToggle?.addEventListener('click', () => {
+    diagPanel.classList.toggle('visible');
+    diagToggle.classList.toggle('active');
+  });
+
+  // Mark mic as unavailable visually if env can't support voice
+  if (voiceWillFail) {
+    // wait until DOM is fully parsed; the script runs at end of body so this is safe
+    const mb = document.getElementById('mic-btn');
+    if (mb) mb.classList.add('unavailable');
+  }
+
+  // Kick off with environment summary so user can share it
+  diag(`browser=${ENV.isChrome?'chrome':ENV.isFirefox?'firefox':ENV.isSafari?'safari':'other'} · protocol=${location.protocol} · sr=${ENV.hasSR?'yes':'no'} · ua-locale=${navigator.language}`);
+  if (voiceWillFail) diag('voice WILL fail in this environment — see banner above', 'err');
+  else diag('environment looks ok for voice', 'ok');
+
   // ============ Configuration ============
   const PALETTES = [
     { color: '#ffe1b8', glow: 'rgba(255, 200, 130, 0.95)' },
@@ -946,11 +1122,19 @@
   const Y_MAX = 48;
 
   // ============ State (live-tunable) ============
-  let speedMultiplier   = 1.0;
-  let instancesPerWord  = 5;     // v3 was 7 — lighter default
-  let sizeMultiplier    = 1.0;
-  let userPaused        = false;
-  let autoPaused        = false;
+  let speedMultiplier    = 1.0;
+  let instancesPerWord   = 5;
+  let sizeMultiplier     = 1.0;
+  let lifespanMultiplier = 1.0;
+  let glowMultiplier     = 1.0;
+  let floatMultiplier    = 1.0;
+  let userPaused         = false;
+  let autoPaused         = false;
+
+  // Auto-cast state — cycles Off → 2s → 4s → 8s
+  const AUTOCAST_INTERVALS = [0, 2000, 4000, 8000];
+  let autocastIdx = 0;
+  let autocastTimer = null;
 
   // Set-based wrapper tracking — single source of truth, no counter drift
   const activeWrappers = new Set();
@@ -966,16 +1150,26 @@
   const langButtons   = document.querySelectorAll('.lang-btn');
   const bgToggle      = document.getElementById('bg-toggle');
 
-  const speedSlider   = document.getElementById('speed-slider');
-  const densitySlider = document.getElementById('density-slider');
-  const sizeSlider    = document.getElementById('size-slider');
-  const speedVal      = document.getElementById('speed-val');
-  const densityVal    = document.getElementById('density-val');
-  const sizeVal       = document.getElementById('size-val');
-  const pauseBtn      = document.getElementById('pause-btn');
-  const pauseLabel    = document.getElementById('pause-label');
-  const pauseIcon     = document.getElementById('pause-icon');
-  const clearBtn      = document.getElementById('clear-btn');
+  const speedSlider    = document.getElementById('speed-slider');
+  const densitySlider  = document.getElementById('density-slider');
+  const sizeSlider     = document.getElementById('size-slider');
+  const lifespanSlider = document.getElementById('lifespan-slider');
+  const glowSlider     = document.getElementById('glow-slider');
+  const floatSlider    = document.getElementById('float-slider');
+  const speedVal       = document.getElementById('speed-val');
+  const densityVal     = document.getElementById('density-val');
+  const sizeVal        = document.getElementById('size-val');
+  const lifespanVal    = document.getElementById('lifespan-val');
+  const glowVal        = document.getElementById('glow-val');
+  const floatVal       = document.getElementById('float-val');
+  const pauseBtn       = document.getElementById('pause-btn');
+  const pauseLabel     = document.getElementById('pause-label');
+  const pauseIcon      = document.getElementById('pause-icon');
+  const clearBtn       = document.getElementById('clear-btn');
+  const resetBtn       = document.getElementById('reset-btn');
+  const autocastBtn    = document.getElementById('autocast-btn');
+  const autocastLabel  = document.getElementById('autocast-label');
+  const audioDot       = document.getElementById('audio-dot');
 
   // ============ Utilities ============
   const rand = (a, b) => a + Math.random() * (b - a);
@@ -1065,9 +1259,13 @@
     wrapper.style.fontWeight = bold ? '600' : '400';
     wrapper.style.setProperty('--glow', palette.glow);
     wrapper.style.setProperty('--rot', `${rotation}deg`);
+    // New: glow + float scale CSS variables consumed by .char text-shadow and keyframes
+    wrapper.style.setProperty('--glow-scale', glowMultiplier);
+    wrapper.style.setProperty('--float-scale', floatMultiplier);
 
     const chars = [...word];
-    const lifespanMs = (5800 + chars.length * 60 + rand(0, 700)) / speedMultiplier;
+    // Lifespan multiplier scales how long text lives (independent of speed which scales tempo)
+    const lifespanMs = ((5800 + chars.length * 60 + rand(0, 700)) / speedMultiplier) * lifespanMultiplier;
     const charDelayStep = rand(40, 75) / speedMultiplier;
 
     chars.forEach((ch, i) => {
@@ -1124,119 +1322,114 @@
     });
   }
 
-  // ============ Speech Recognition — parallel multi-language ============
-  // Three recognizers run simultaneously (EN, ID, MS). When you speak, all three
-  // try to transcribe the same audio. We collect their final results in a short
-  // window and pick the highest-confidence one. The winning language briefly flashes.
+  // ============ Speech Recognition — single recognizer with language picker ============
+  // One active language at a time. User picks via the EN/ID/MS buttons.
+  // Default language picked from browser locale on boot.
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const LANGS = [
     { code: 'en-US', name: 'English' },
     { code: 'id-ID', name: 'Bahasa Indonesia' },
     { code: 'ms-MY', name: 'Bahasa Malaysia' }
   ];
-  const recognizers = {};   // code → SpeechRecognition instance
+
+  function pickDefaultLang() {
+    const ul = (navigator.language || 'en').toLowerCase();
+    if (ul.startsWith('id')) return 'id-ID';
+    if (ul.startsWith('ms')) return 'ms-MY';
+    return 'en-US';
+  }
+
+  let recognition = null;
   let listening = false;
+  let currentLang = pickDefaultLang();
 
-  // Result aggregation
-  let pendingResults = [];
-  let collectTimer = null;
-  const COLLECT_WINDOW_MS = 800;
-
-  function buildRecognizer(langCode) {
+  function buildRecognizer() {
     if (!SR) return null;
     const r = new SR();
     r.continuous = true;
     r.interimResults = true;
-    r.lang = langCode;
+    r.lang = currentLang;
+
+    r.onstart       = () => { diag(`[${currentLang}] started`, 'ok'); };
+    r.onaudiostart  = () => { diag(`[${currentLang}] audio capture began`, 'audio'); audioDot.classList.add('live'); };
+    r.onaudioend    = () => { diag(`[${currentLang}] audio capture ended`, 'audio'); audioDot.classList.remove('live'); };
+    r.onspeechstart = () => { diag(`[${currentLang}] speech detected`, 'audio'); };
+    r.onspeechend   = () => { diag(`[${currentLang}] speech ended`, 'audio'); };
+    r.onnomatch     = () => { diag(`[${currentLang}] no match for utterance`, 'warn'); };
 
     r.onresult = (event) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         const transcript = result[0].transcript.trim();
+        const conf = result[0].confidence || 0;
         if (!transcript) continue;
         if (result.isFinal) {
-          handleFinalResult({
-            transcript,
-            confidence: result[0].confidence || 0,
-            lang: langCode
-          });
+          diag(`[${currentLang}] FINAL "${transcript}" (conf=${conf.toFixed(2)})`, 'ok');
+          statusEl.textContent = `"${transcript}"`;
+          flashLang(currentLang);
+          castPhrase(transcript);
         } else {
-          // Show interim feedback so user knows mic is active.
-          // Three engines may overwrite each other rapidly — that's fine, last one wins.
           statusEl.textContent = `… ${transcript}`;
         }
       }
     };
 
     r.onend = () => {
-      // Auto-restart if we're still meant to be listening AND not auto-paused
+      diag(`[${currentLang}] ended (listening=${listening}, autoPaused=${autoPaused})`);
       if (listening && !autoPaused) {
-        try { r.start(); } catch (e) { /* may throw if quickly re-started */ }
+        try { r.start(); } catch (e) { diag(`restart threw: ${e.message}`, 'warn'); }
       }
     };
 
     r.onerror = (e) => {
+      diag(`[${currentLang}] error: ${e.error}${e.message ? ' — ' + e.message : ''}`, 'err');
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         statusEl.textContent = 'Microphone permission denied';
+        showCompatBanner({
+          level: 'error',
+          title: 'Microphone permission denied',
+          html: `Click the camera/microphone icon in your browser's address bar and allow microphone access, then click the mic button again.`
+        });
         stopListening();
       } else if (e.error === 'audio-capture') {
         statusEl.textContent = 'No microphone detected';
+        showCompatBanner({
+          level: 'error',
+          title: 'No microphone detected',
+          html: `Your system reports no working microphone. Check OS-level mic permissions and ensure a mic is plugged in.`
+        });
         stopListening();
+      } else if (e.error === 'network') {
+        if (!networkErrorShown) {
+          networkErrorShown = true;
+          showCompatBanner({
+            level: 'error',
+            title: "Can't reach the speech service",
+            html: `Speech recognition needs to reach Google's speech servers. A firewall, VPN, or restrictive network may be blocking it. Try a different network.`
+          });
+        }
       }
-      // 'no-speech', 'aborted', 'network' → silent, onend will retry
     };
 
     return r;
   }
 
-  // Score a candidate result: prefer high confidence; fall back to length+wordcount
-  // when confidence is unreliable (some browsers always return 0).
-  function scoreResult(item) {
-    if (item.confidence > 0.05) return item.confidence;
-    // Heuristic: more words + longer text usually = better match
-    const words = item.transcript.split(/\s+/).length;
-    return 0.05 + words * 0.04 + item.transcript.length * 0.0008;
-  }
-
-  function handleFinalResult(item) {
-    pendingResults.push(item);
-    if (!collectTimer) {
-      collectTimer = setTimeout(processPending, COLLECT_WINDOW_MS);
-    }
-  }
-
-  function processPending() {
-    collectTimer = null;
-    if (pendingResults.length === 0) return;
-
-    // Pick the best candidate
-    pendingResults.sort((a, b) => scoreResult(b) - scoreResult(a));
-    const winner = pendingResults[0];
-    pendingResults = [];
-
-    // Update UI + cast
-    statusEl.textContent = `"${winner.transcript}"`;
-    flashLang(winner.lang);
-    castPhrase(winner.transcript);
-  }
+  let networkErrorShown = false;
 
   function flashLang(langCode) {
     const btn = document.querySelector(`.lang-btn[data-lang="${langCode}"]`);
     if (!btn) return;
     btn.classList.add('flash');
-    setTimeout(() => btn.classList.remove('flash'), 1100);
+    setTimeout(() => btn.classList.remove('flash'), 1000);
   }
 
-  // Pre-grant microphone permission via getUserMedia ONCE before starting recognizers.
-  // This way the three SpeechRecognition instances reuse the existing grant instead
-  // of each one triggering a separate permission prompt.
+  // Pre-grant microphone permission via getUserMedia ONCE before starting.
   let micPreGranted = false;
   async function preGrantMic() {
     if (micPreGranted) return true;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // We don't actually need the audio — just the permission. Stop tracks.
       stream.getTracks().forEach(t => t.stop());
       micPreGranted = true;
       return true;
@@ -1246,65 +1439,112 @@
     }
   }
 
+  let noAudioWatchdog = null;
+
   async function startListening() {
     if (voiceWillFail) {
-      // Banner already explains why; just nudge the status
       statusEl.textContent = 'Voice unavailable — see banner above';
+      diag('start blocked: voiceWillFail=true', 'err');
       return;
     }
     if (!SR) {
       statusEl.textContent = 'Voice not supported here — use the text field';
-      micBtn.disabled = true;
-      micBtn.style.opacity = '0.4';
-      micBtn.style.cursor = 'not-allowed';
+      micBtn.classList.add('unavailable');
       return;
     }
 
-    // Step 1: ask for mic permission ONCE (shared across all recognizers)
+    diag('start: requesting microphone permission via getUserMedia');
     statusEl.textContent = 'Requesting microphone…';
     const ok = await preGrantMic();
     if (!ok) {
+      diag('getUserMedia denied or failed', 'err');
       statusEl.textContent = 'Microphone permission denied';
       return;
     }
+    diag(`getUserMedia granted — starting recognizer in ${currentLang}`, 'ok');
 
     listening = true;
-
-    // Step 2: spin up all three recognizers, staggered with longer gaps
-    // (250ms is empirically more stable than 90ms across browsers)
-    LANGS.forEach((l, idx) => {
-      setTimeout(() => {
-        if (!listening) return;
-        if (!recognizers[l.code]) recognizers[l.code] = buildRecognizer(l.code);
-        try { recognizers[l.code].start(); } catch (e) { /* already started */ }
-      }, idx * 250);
-    });
+    if (!recognition) recognition = buildRecognizer();
+    try {
+      recognition.start();
+    } catch (e) {
+      diag(`start() threw: ${e.message}`, 'err');
+    }
 
     micBtn.classList.add('active');
     controlsEl.classList.add('listening');
     stage.classList.add('listening');
-    document.querySelectorAll('.lang-btn').forEach(b => b.classList.add('active'));
-    statusEl.textContent = 'Listening in EN · ID · MS …';
+    const langName = LANGS.find(l => l.code === currentLang)?.name || currentLang;
+    statusEl.textContent = `Listening… (${langName})`;
+
+    // No-audio watchdog
+    if (noAudioWatchdog) clearTimeout(noAudioWatchdog);
+    noAudioWatchdog = setTimeout(() => {
+      if (!listening) return;
+      if (!audioDot.classList.contains('live')) {
+        diag('watchdog: no audio detected within 7s', 'warn');
+        showCompatBanner({
+          level: 'warning',
+          title: 'No audio detected yet',
+          html: `Recognizer started but no audio is being captured. Possible causes:<br>
+            • Mic muted or wrong device selected — check the mic icon in the address bar<br>
+            • OS-level mic permission blocked (Settings → Privacy → Microphone)<br>
+            Open the <b>Diag</b> panel to see exactly what's happening.`
+        });
+      }
+    }, 7000);
   }
 
   function stopListening() {
     listening = false;
-    Object.values(recognizers).forEach(r => {
-      try { r.stop(); } catch (e) {}
-    });
+    if (noAudioWatchdog) { clearTimeout(noAudioWatchdog); noAudioWatchdog = null; }
+    if (recognition) {
+      try { recognition.stop(); } catch (e) {}
+    }
     micBtn.classList.remove('active');
     controlsEl.classList.remove('listening');
     stage.classList.remove('listening');
-    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active', 'flash'));
+    audioDot.classList.remove('live');
     statusEl.textContent = 'Click the microphone to begin again';
-    // Drop any pending results
-    pendingResults = [];
-    if (collectTimer) { clearTimeout(collectTimer); collectTimer = null; }
+    diag('listener stopped', 'warn');
   }
 
   micBtn.addEventListener('click', () => {
     if (listening) stopListening();
     else startListening();
+  });
+
+  // ============ Language switching ============
+  // Set the default language button as active immediately
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    if (btn.dataset.lang === currentLang) btn.classList.add('active');
+    btn.addEventListener('click', () => {
+      if (btn.dataset.lang === currentLang) return; // no-op
+      document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentLang = btn.dataset.lang;
+      diag(`language switched to ${currentLang}`);
+
+      // Cleanly tear down old recognizer and rebuild with new lang
+      const wasListening = listening;
+      if (recognition) {
+        try { recognition.abort(); } catch (e) {}
+        recognition = null;
+      }
+      if (wasListening) {
+        // small delay so onend doesn't fire after we've decided to restart
+        setTimeout(() => {
+          if (!listening) return;
+          recognition = buildRecognizer();
+          try { recognition.start(); } catch (e) { diag(`re-start threw: ${e.message}`, 'warn'); }
+          const langName = LANGS.find(l => l.code === currentLang)?.name || currentLang;
+          statusEl.textContent = `Listening… (${langName})`;
+        }, 200);
+      } else {
+        const langName = LANGS.find(l => l.code === currentLang)?.name || currentLang;
+        statusEl.textContent = `Language: ${langName}`;
+      }
+    });
   });
 
   // ============ Background toggle ============
@@ -1326,6 +1566,68 @@
   sizeSlider.addEventListener('input', () => {
     sizeMultiplier = parseFloat(sizeSlider.value);
     sizeVal.textContent = `${sizeMultiplier.toFixed(2)}×`;
+  });
+
+  lifespanSlider.addEventListener('input', () => {
+    lifespanMultiplier = parseFloat(lifespanSlider.value);
+    lifespanVal.textContent = `${lifespanMultiplier.toFixed(1)}×`;
+  });
+
+  glowSlider.addEventListener('input', () => {
+    glowMultiplier = parseFloat(glowSlider.value);
+    glowVal.textContent = `${glowMultiplier.toFixed(1)}×`;
+  });
+
+  floatSlider.addEventListener('input', () => {
+    floatMultiplier = parseFloat(floatSlider.value);
+    floatVal.textContent = `${floatMultiplier.toFixed(1)}×`;
+  });
+
+  // ============ Reset all sliders ============
+  const SLIDER_DEFAULTS = {
+    speed: 1.0, density: 5, size: 1.0,
+    lifespan: 1.0, glow: 1.0, float: 1.0,
+  };
+
+  function resetAllSliders() {
+    speedSlider.value = SLIDER_DEFAULTS.speed;
+    densitySlider.value = SLIDER_DEFAULTS.density;
+    sizeSlider.value = SLIDER_DEFAULTS.size;
+    lifespanSlider.value = SLIDER_DEFAULTS.lifespan;
+    glowSlider.value = SLIDER_DEFAULTS.glow;
+    floatSlider.value = SLIDER_DEFAULTS.float;
+    // Trigger handlers so state + labels update
+    speedSlider.dispatchEvent(new Event('input'));
+    densitySlider.dispatchEvent(new Event('input'));
+    sizeSlider.dispatchEvent(new Event('input'));
+    lifespanSlider.dispatchEvent(new Event('input'));
+    glowSlider.dispatchEvent(new Event('input'));
+    floatSlider.dispatchEvent(new Event('input'));
+  }
+
+  resetBtn.addEventListener('click', resetAllSliders);
+
+  // ============ Auto-cast ============
+  // Cycles Off → 2s → 4s → 8s on each click, casting random market words.
+  function applyAutocast() {
+    if (autocastTimer) { clearInterval(autocastTimer); autocastTimer = null; }
+    const interval = AUTOCAST_INTERVALS[autocastIdx];
+    if (interval > 0) {
+      autocastBtn.classList.add('active');
+      autocastLabel.textContent = `Auto: ${interval / 1000}s`;
+      autocastTimer = setInterval(() => {
+        if (userPaused || autoPaused) return;
+        castWord(pick(SEED_WORDS));
+      }, interval);
+    } else {
+      autocastBtn.classList.remove('active');
+      autocastLabel.textContent = 'Auto: Off';
+    }
+  }
+
+  autocastBtn.addEventListener('click', () => {
+    autocastIdx = (autocastIdx + 1) % AUTOCAST_INTERVALS.length;
+    applyAutocast();
   });
 
   // ============ Pause / Clear ============
@@ -1368,19 +1670,16 @@
     autoPaused = document.hidden;
     syncPauseUI();
     if (autoPaused && listening) {
-      // Stop all recognizers; onend will NOT restart because autoPaused is true
-      Object.values(recognizers).forEach(r => {
-        try { r.stop(); } catch (e) {}
-      });
+      if (recognition) {
+        try { recognition.stop(); } catch (e) {}
+      }
     } else if (!autoPaused && listening) {
-      // Visibility regained — restart all three with same stagger
-      LANGS.forEach((l, idx) => {
-        setTimeout(() => {
-          if (!listening || autoPaused) return;
-          if (!recognizers[l.code]) recognizers[l.code] = buildRecognizer(l.code);
-          try { recognizers[l.code].start(); } catch (e) {}
-        }, idx * 250);
-      });
+      // Visibility regained — restart the single recognizer
+      setTimeout(() => {
+        if (!listening || autoPaused) return;
+        if (!recognition) recognition = buildRecognizer();
+        try { recognition.start(); } catch (e) {}
+      }, 200);
     }
   });
 
